@@ -33,6 +33,8 @@
 #include <signal.h>
 #include <ctype.h>
 
+#define MAX_TIME
+
 void slotToKeyAdd(robj *key);
 void slotToKeyDel(robj *key);
 void slotToKeyFlush(void);
@@ -43,14 +45,18 @@ void slotToKeyFlush(void);
 
 robj *lookupKey(redisDb *db, robj *key) {
     dictEntry *de = dictFind(db->dict,key->ptr);
+    unsigned int lru_clock;
     if (de) {
         robj *val = dictGetVal(de);
 
         /* Update the access time for the ageing algorithm.
          * Don't do it if we have a saving child, as this will trigger
          * a copy on write madness. */
-        if (server.rdb_child_pid == -1 && server.aof_child_pid == -1)
-            val->lru = LRU_CLOCK();
+        if (server.rdb_child_pid == -1 && server.aof_child_pid == -1) {
+            lru_clock = LRU_CLOCK();
+            key->lru = lru_clock - val->lru;
+            val->lru = lru_clock;;
+        }
         return val;
     } else {
         return NULL;
@@ -59,13 +65,24 @@ robj *lookupKey(redisDb *db, robj *key) {
 
 robj *lookupKeyRead(redisDb *db, robj *key) {
     robj *val;
+    // Hack to get the reuse_time from lookupKey
+    unsigned int oldkeylru = key->lru, reuse_time;
 
     expireIfNeeded(db,key);
     val = lookupKey(db,key);
-    if (val == NULL)
+    reuse_time = key->lru;
+    key->lru = oldkeylru;
+    if (val == NULL) {
         server.stat_keyspace_misses++;
-    else
+    } else {
         server.stat_keyspace_hits++;
+        if (reuse_time < MAX_REUSE_TIME) {
+          printf("HIT(%s) -> reuse_time=%u\n", key->ptr, reuse_time);
+          TIME_PDF[reuse_time]++;
+        } else {
+          OLDER_REUSE_TIME_HITS++;
+        }
+    }
     return val;
 }
 

@@ -406,6 +406,11 @@ typedef struct redisObject {
     void *ptr;
 } robj;
 
+
+#define MAX_REUSE_TIME 31*24*60*60
+unsigned int *TIME_PDF;
+extern unsigned int OLDER_REUSE_TIME_HITS;
+
 /* Macro used to obtain the current LRU clock.
  * If the current resolution is lower than the frequency we refresh the
  * LRU clock (as it should be in production servers) we return the
@@ -1418,6 +1423,8 @@ void sortCommand(redisClient *c);
 void lremCommand(redisClient *c);
 void rpoplpushCommand(redisClient *c);
 void infoCommand(redisClient *c);
+void reuseTimePDFCommand(redisClient *c);
+void reuseTimeCDFCommand(redisClient *c);
 void mgetCommand(redisClient *c);
 void monitorCommand(redisClient *c);
 void expireCommand(redisClient *c);

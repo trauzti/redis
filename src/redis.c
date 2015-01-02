@@ -62,6 +62,7 @@ struct sharedObjectsStruct shared;
 
 double R_Zero, R_PosInf, R_NegInf, R_Nan;
 
+unsigned int OLDER_REUSE_TIME_HITS = 0;
 /*================================= Globals ================================= */
 
 /* Global vars */
@@ -241,6 +242,8 @@ struct redisCommand redisCommandTable[] = {
     {"flushall",flushallCommand,1,"w",0,NULL,0,0,0,0,0},
     {"sort",sortCommand,-2,"wm",0,sortGetKeys,1,1,1,0,0},
     {"info",infoCommand,-1,"rlt",0,NULL,0,0,0,0,0},
+    {"reusetimepdf",reuseTimePDFCommand,-1,"rlt",0,NULL,0,0,0,0,0},
+    {"reusetimecdf",reuseTimeCDFCommand,-1,"rlt",0,NULL,0,0,0,0,0},
     {"monitor",monitorCommand,1,"ars",0,NULL,0,0,0,0,0},
     {"ttl",ttlCommand,2,"rF",0,NULL,1,1,1,0,0},
     {"pttl",pttlCommand,2,"rF",0,NULL,1,1,1,0,0},
@@ -1726,6 +1729,7 @@ void initServer(void) {
     adjustOpenFilesLimit();
     server.el = aeCreateEventLoop(server.maxclients+REDIS_EVENTLOOP_FDSET_INCR);
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
+    TIME_PDF = zmalloc(sizeof(unsigned int)*MAX_REUSE_TIME);
 
     /* Open the TCP listening socket for the user commands. */
     if (server.port != 0 &&
@@ -2561,6 +2565,33 @@ void bytesToHuman(char *s, unsigned long long n) {
     }
 }
 
+sds genRedisReuseTimePDFString(int numvals) {
+  // finish this function
+    sds result = sdsempty();
+    int i;
+    for (i = 0; i < numvals; i++) {
+        //result = sdscat(info,"\r\n");
+        result = sdscatprintf(result, "%u\r\n", TIME_PDF[i]);
+    }
+    return result;
+}
+
+sds genRedisReuseTimeCDFString(int numvals) {
+    // Create the CDF!!
+    sds result = sdsempty();
+    int i;
+    double sm = 0.0;
+    double normalizer = (double) server.stat_keyspace_hits;
+    //double normalizer = keyspace_hits + keyspace_misses;
+    for (i = 0; i < numvals; i++) {
+
+        //result = sdscat(info,"\r\n");
+        sm += TIME_PDF[i];
+        result = sdscatprintf(result, "%lf\r\n", sm / normalizer );
+    }
+    return result;
+}
+
 /* Create the string returned by the INFO command. This is decoupled
  * by the INFO command itself as we need to report the same information
  * on memory corruption problems. */
@@ -3003,6 +3034,34 @@ void infoCommand(redisClient *c) {
     addReplySds(c,sdscatprintf(sdsempty(),"$%lu\r\n",
         (unsigned long)sdslen(info)));
     addReplySds(c,info);
+    addReply(c,shared.crlf);
+}
+
+void reuseTimePDFCommand(redisClient *c) {
+    int numvals = c->argc == 2 ? atoi(c->argv[1]->ptr) : 100; // 100 values by default
+
+    if (c->argc > 2) {
+        addReply(c,shared.syntaxerr);
+        return;
+    }
+    sds result = genRedisReuseTimePDFString(numvals);
+    addReplySds(c,sdscatprintf(sdsempty(),"$%lu\r\n",
+        (unsigned long)sdslen(result)));
+    addReplySds(c,result);
+    addReply(c,shared.crlf);
+}
+
+void reuseTimeCDFCommand(redisClient *c) {
+    int numvals = c->argc == 2 ? atoi(c->argv[1]->ptr) : 100; // 100 values by default
+
+    if (c->argc > 2) {
+        addReply(c,shared.syntaxerr);
+        return;
+    }
+    sds result = genRedisReuseTimeCDFString(numvals);
+    addReplySds(c,sdscatprintf(sdsempty(),"$%lu\r\n",
+        (unsigned long)sdslen(result)));
+    addReplySds(c,result);
     addReply(c,shared.crlf);
 }
 

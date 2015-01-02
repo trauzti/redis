@@ -28,6 +28,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+// This is a wrapper for jemalloc. It keeps track of the total amount of allocated memory
+
 #include <stdio.h>
 #include <stdlib.h>
 
