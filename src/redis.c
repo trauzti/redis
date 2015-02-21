@@ -1698,6 +1698,8 @@ void resetServerStats(void) {
     server.ops_sec_idx = 0;
     server.ops_sec_last_sample_time = mstime();
     server.ops_sec_last_sample_ops = 0;
+    // Addition for maxmemory radish benchmarking
+    server.stat_peak_memory = 0;
 }
 
 void initServer(void) {

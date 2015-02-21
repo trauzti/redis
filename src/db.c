@@ -77,7 +77,6 @@ robj *lookupKeyRead(redisDb *db, robj *key) {
     } else {
         server.stat_keyspace_hits++;
         if (reuse_time < MAX_REUSE_TIME) {
-          printf("HIT(%s) -> reuse_time=%u\n", key->ptr, reuse_time);
           TIME_PDF[reuse_time]++;
         } else {
           OLDER_REUSE_TIME_HITS++;
