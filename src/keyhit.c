@@ -25,10 +25,10 @@ void sendViaUdp(char *message, char *host, int port) {
 }
 
 void emitKeyhit(char *key, int hit) {
-	char buf[32];
-	bzero(buf, 32);
-	snprintf(buf, sizeof(buf)-1, "%s:%d", key, hit);
-	fprintf(stderr, "keyhit:%s\n", buf);
+	char buf[128];  // XXX: how long can redis keys be?
+	bzero(buf, 128);
+	snprintf(buf, sizeof(buf)-1, "%s\n", key);
+    // XXX: use `hit` value? configurable whether we send it along?
 	sendViaUdp(buf, (char *)KH_DEFAULT_HOST, KH_DEFAULT_PORT);
 }
 
