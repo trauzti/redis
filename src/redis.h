@@ -910,6 +910,10 @@ struct redisServer {
     int watchdog_period;  /* Software watchdog period in ms. 0 = off */
     /* System hardware info */
     size_t system_memory_size;  /* Total memory in system as reported by OS */
+
+    /* keyhit sampling variables */
+    int keyhit_sampling;
+    double keyhit_sampling_p;
 };
 
 typedef struct pubsubPattern {
@@ -1141,6 +1145,7 @@ int getLongFromObjectOrReply(redisClient *c, robj *o, long *target, const char *
 int checkType(redisClient *c, robj *o, int type);
 int getLongLongFromObjectOrReply(redisClient *c, robj *o, long long *target, const char *msg);
 int getDoubleFromObjectOrReply(redisClient *c, robj *o, double *target, const char *msg);
+int getDoubleFromObject(robj *o, double *target);
 int getLongLongFromObject(robj *o, long long *target);
 int getLongDoubleFromObject(robj *o, long double *target);
 int getLongDoubleFromObjectOrReply(redisClient *c, robj *o, long double *target, const char *msg);

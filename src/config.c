@@ -609,6 +609,7 @@ void loadServerConfig(char *filename, char *options) {
 void configSetCommand(redisClient *c) {
     robj *o;
     long long ll;
+    double d;
     redisAssertWithInfo(c,c->argv[2],sdsEncodedObject(c->argv[2]));
     redisAssertWithInfo(c,c->argv[3],sdsEncodedObject(c->argv[3]));
     o = c->argv[3];
@@ -961,6 +962,11 @@ void configSetCommand(redisClient *c) {
         if (getLongLongFromObject(o,&ll) == REDIS_ERR ||
             ll < 0) goto badfmt;
         server.cluster_slave_validity_factor = ll;
+    } else if (!strcasecmp(c->argv[2]->ptr,"keyhit-sampling")) {
+        server.keyhit_sampling = 1;
+        if (getDoubleFromObject(o, &d) == REDIS_ERR ||
+            (d > 1.0 || d < 0.0)) goto badfmt;
+        server.keyhit_sampling_p = d;
     } else {
         addReplyErrorFormat(c,"Unsupported CONFIG parameter: %s",
             (char*)c->argv[2]->ptr);

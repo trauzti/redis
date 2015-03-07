@@ -29,6 +29,7 @@
 
 #include "redis.h"
 #include "cluster.h"
+#include "keyhit.h"
 
 #include <signal.h>
 #include <ctype.h>
@@ -91,6 +92,13 @@ robj *lookupKeyRead(redisDb *db, robj *key) {
         server.stat_keyspace_misses++;
     else
         server.stat_keyspace_hits++;
+
+    if (server.keyhit_sampling == 1) {
+        if (((double)random() / (double)RAND_MAX) <= server.keyhit_sampling_p) {
+            emitKeyhit((char *)key->ptr, val != NULL);
+        }
+    }
+
     return val;
 }
 
