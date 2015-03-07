@@ -1678,6 +1678,7 @@ int listenToPort(int port, int *fds, int *count) {
     return REDIS_OK;
 }
 
+
 /* Resets the stats that we expose via INFO or other means that we want
  * to reset via CONFIG RESETSTAT. The function is also used in order to
  * initialize these fields in initServer() at server startup. */
@@ -3331,7 +3332,10 @@ int freeMemoryIfNeeded(void) {
             if (bestkey) {
                 long long delta;
 
+
+
                 robj *keyobj = createStringObject(bestkey,sdslen(bestkey));
+                //printf("evicting(%s)\n", keyobj->ptr);
                 propagateExpire(db,keyobj);
                 /* We compute the amount of memory freed by dbDelete() alone.
                  * It is possible that actually the memory needed to propagate
