@@ -1116,6 +1116,14 @@ void configGetCommand(redisClient *c) {
 
     /* Everything we can't handle with macros follows. */
 
+    if (stringmatch(pattern,"keyhit-sampling",0)) {
+        addReplyBulkCString(c,"keyhit-sampling");
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%lf", server.keyhit_sampling_p);
+        addReplyBulkCString(c, buf);
+        matches++;
+    }
+
     if (stringmatch(pattern,"appendonly",0)) {
         addReplyBulkCString(c,"appendonly");
         addReplyBulkCString(c,server.aof_state == REDIS_AOF_OFF ? "no" : "yes");
