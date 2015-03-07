@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <strings.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -22,6 +23,7 @@ void sendViaUdp(char *message, char *host, int port) {
 	servaddr.sin_addr.s_addr = inet_addr(host);
 	servaddr.sin_port = htons(port);
 	sendto(sock, message, strlen(message), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    close(sock);
 }
 
 void emitKeyhit(char *key, int hit) {
