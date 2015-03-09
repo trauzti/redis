@@ -912,8 +912,10 @@ struct redisServer {
     size_t system_memory_size;  /* Total memory in system as reported by OS */
 
     /* keyhit sampling variables */
-    int keyhit_sampling;
-    double keyhit_sampling_p;
+    int key_sampling;
+    double key_sampling_p;
+    char *key_sampling_host;
+    int key_sampling_port;
 };
 
 typedef struct pubsubPattern {

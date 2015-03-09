@@ -3,4 +3,4 @@
  */
 
 /* Exported API */
-void emitKeyhit(char *key, int hit);
+void emitKey(char *key);

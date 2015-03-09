@@ -962,11 +962,16 @@ void configSetCommand(redisClient *c) {
         if (getLongLongFromObject(o,&ll) == REDIS_ERR ||
             ll < 0) goto badfmt;
         server.cluster_slave_validity_factor = ll;
-    } else if (!strcasecmp(c->argv[2]->ptr,"keyhit-sampling")) {
-        server.keyhit_sampling = 1;
+    } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling")) {
+        int yes;
+        if ((yes = yesnotoi(o->ptr) == -1)) {
+            addReplyErrorFormat(c, "argument must be 'yes' or 'no'");
+        }
+        server.key_sampling = yes;
+    } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-p")) {
         if (getDoubleFromObject(o, &d) == REDIS_ERR ||
             (d > 1.0 || d < 0.0)) goto badfmt;
-        server.keyhit_sampling_p = d;
+        server.key_sampling_p = d;
     } else {
         addReplyErrorFormat(c,"Unsupported CONFIG parameter: %s",
             (char*)c->argv[2]->ptr);
@@ -1116,10 +1121,10 @@ void configGetCommand(redisClient *c) {
 
     /* Everything we can't handle with macros follows. */
 
-    if (stringmatch(pattern,"keyhit-sampling",0)) {
-        addReplyBulkCString(c,"keyhit-sampling");
+    if (stringmatch(pattern,"key-sampling",0)) {
+        addReplyBulkCString(c,"key-sampling");
         char buf[32];
-        snprintf(buf, sizeof(buf), "%lf", server.keyhit_sampling_p);
+        snprintf(buf, sizeof(buf), "%lf", server.key_sampling_p);
         addReplyBulkCString(c, buf);
         matches++;
     }
