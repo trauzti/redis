@@ -521,6 +521,21 @@ void loadServerConfigFromString(char *config) {
             if (server.repl_min_slaves_max_lag < 0) {
                 err = "Invalid value for min-slaves-max-lag."; goto loaderr;
             }
+        } else if (!strcasecmp(argv[0],"key-sampling") && argc == 2) {
+            if ((server.key_sampling = yesnotoi(argv[1])) == -1) {
+                err = "argument must be 'yes' or 'no'"; goto loaderr;
+            }
+        } else if (!strcasecmp(argv[0],"key-sampling-p") && argc == 2) {
+            server.key_sampling_p = atof(argv[1]);
+        } else if (!strcasecmp(argv[0],"key-sampling-host") && argc == 2) {
+            server.key_sampling_host = zstrdup(argv[1]);
+        } else if (!strcasecmp(argv[0],"key-sampling-port") && argc == 2) {
+            int port = atoi(argv[1]);
+            server.key_sampling_port = port;
+            if (port <= 0 || port >= 65536) {
+                err = "Key sampling port must be between 1 and 65535";
+                goto loaderr;
+            }
         } else if (!strcasecmp(argv[0],"notify-keyspace-events") && argc == 2) {
             int flags = keyspaceEventsStringToFlags(argv[1]);
 
@@ -972,6 +987,12 @@ void configSetCommand(redisClient *c) {
         if (getDoubleFromObject(o, &d) == REDIS_ERR ||
             (d > 1.0 || d < 0.0)) goto badfmt;
         server.key_sampling_p = d;
+    } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-host")) {
+        server.key_sampling_host = zstrdup(o->ptr);
+    } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-port")) {
+        if (getLongLongFromObject(o, &ll) == REDIS_ERR ||
+            (int)ll >= 65536 || (int)ll <= 0) goto badfmt;
+        server.key_sampling_port = (int)ll;
     } else {
         addReplyErrorFormat(c,"Unsupported CONFIG parameter: %s",
             (char*)c->argv[2]->ptr);
@@ -1044,6 +1065,7 @@ void configGetCommand(redisClient *c) {
     config_get_string_field("unixsocket",server.unixsocket);
     config_get_string_field("logfile",server.logfile);
     config_get_string_field("pidfile",server.pidfile);
+    config_get_string_field("key-sampling-host",server.key_sampling_host);
 
     /* Numerical values */
     config_get_numerical_field("maxmemory",server.maxmemory);
@@ -1094,6 +1116,7 @@ void configGetCommand(redisClient *c) {
     config_get_numerical_field("cluster-migration-barrier",server.cluster_migration_barrier);
     config_get_numerical_field("cluster-slave-validity-factor",server.cluster_slave_validity_factor);
     config_get_numerical_field("repl-diskless-sync-delay",server.repl_diskless_sync_delay);
+    config_get_numerical_field("key-sampling-port",server.key_sampling_port);
 
     /* Bool (yes/no) values */
     config_get_bool_field("cluster-require-full-coverage",
@@ -1118,11 +1141,12 @@ void configGetCommand(redisClient *c) {
             server.aof_rewrite_incremental_fsync);
     config_get_bool_field("aof-load-truncated",
             server.aof_load_truncated);
+    config_get_bool_field("key-sampling", server.key_sampling);
 
     /* Everything we can't handle with macros follows. */
 
-    if (stringmatch(pattern,"key-sampling",0)) {
-        addReplyBulkCString(c,"key-sampling");
+    if (stringmatch(pattern,"key-sampling-p",0)) {
+        addReplyBulkCString(c,"key-sampling-p");
         char buf[32];
         snprintf(buf, sizeof(buf), "%lf", server.key_sampling_p);
         addReplyBulkCString(c, buf);
