@@ -346,6 +346,13 @@ typedef long long mstime_t; /* millisecond time type. */
 #define REDIS_MAXMEMORY_NO_EVICTION 5
 #define REDIS_DEFAULT_MAXMEMORY_POLICY REDIS_MAXMEMORY_NO_EVICTION
 
+/* Redis sampling strategies */
+#define REDIS_SAMPLING_RANDOM 0
+#define REDIS_SAMPLING_HASH 1
+
+/* Redis sampling */
+#define REDIS_DO_SAMPLING 1
+
 /* Scripting */
 #define REDIS_LUA_TIME_LIMIT 5000 /* milliseconds */
 
@@ -916,6 +923,7 @@ struct redisServer {
     double key_sampling_p;
     char *key_sampling_host;
     int key_sampling_port;
+    int key_sampling_policy;
 };
 
 typedef struct pubsubPattern {
@@ -1326,8 +1334,11 @@ void propagateExpire(redisDb *db, robj *key);
 int expireIfNeeded(redisDb *db, robj *key);
 long long getExpire(redisDb *db, robj *key);
 void setExpire(redisDb *db, robj *key, long long when);
+robj *getKeyValue(redisDb *db, robj *key, unsigned int *h);
 robj *lookupKey(redisDb *db, robj *key);
+robj *lookupKeyStoreHash(redisDb *db, robj *key, unsigned int *h);
 robj *lookupKeyRead(redisDb *db, robj *key);
+robj *lookupKeyReadWithClient(redisClient *c, robj *key);
 robj *lookupKeyWrite(redisDb *db, robj *key);
 robj *lookupKeyReadOrReply(redisClient *c, robj *key, robj *reply);
 robj *lookupKeyWriteOrReply(redisClient *c, robj *key, robj *reply);

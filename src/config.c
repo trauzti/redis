@@ -528,7 +528,24 @@ void loadServerConfigFromString(char *config) {
         } else if (!strcasecmp(argv[0],"key-sampling-p") && argc == 2) {
             server.key_sampling_p = atof(argv[1]);
         } else if (!strcasecmp(argv[0],"key-sampling-host") && argc == 2) {
+            // TODO: Ensure that this is an IP address
+            //if (!isValidHost()) {
+            //    err = "Key sampling port must be between 1 and 65535";
+            //    goto loaderr;
+            //}
             server.key_sampling_host = zstrdup(argv[1]);
+        } else if (!strcasecmp(argv[0],"key-sampling-policy") && argc == 2) {
+            if (!strncmp(argv[1], "random", 6)) {
+                server.key_sampling_policy = REDIS_SAMPLING_RANDOM; 
+                printf("using random sampling\n");
+            } else if (!strncmp(argv[1], "hash", 4)) {
+                server.key_sampling_policy = REDIS_SAMPLING_HASH; 
+                printf("using hash sampling\n");
+            } else { 
+                server.key_sampling_policy = -1; 
+                err = "Key sampling policy not valid";
+                goto loaderr;
+            }
         } else if (!strcasecmp(argv[0],"key-sampling-port") && argc == 2) {
             int port = atoi(argv[1]);
             server.key_sampling_port = port;
@@ -988,6 +1005,7 @@ void configSetCommand(redisClient *c) {
             (d > 1.0 || d < 0.0)) goto badfmt;
         server.key_sampling_p = d;
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-host")) {
+        // TODO: Validate that this is an IP address.
         server.key_sampling_host = zstrdup(o->ptr);
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-port")) {
         if (getLongLongFromObject(o, &ll) == REDIS_ERR ||
@@ -1050,6 +1068,16 @@ char *maxmemoryToString() {
     return s;
 }
 
+char *keySamplingToString() {
+    char *s;
+    switch(server.key_sampling_policy) {
+    case REDIS_SAMPLING_RANDOM: s = "random"; break;
+    case REDIS_SAMPLING_HASH: s = "hash"; break;
+    default: s = "unknown"; break;
+    }
+    return s;
+}
+
 void configGetCommand(redisClient *c) {
     robj *o = c->argv[2];
     void *replylen = addDeferredMultiBulkLength(c);
@@ -1065,6 +1093,7 @@ void configGetCommand(redisClient *c) {
     config_get_string_field("unixsocket",server.unixsocket);
     config_get_string_field("logfile",server.logfile);
     config_get_string_field("pidfile",server.pidfile);
+    // TODO: Ensure that this is an IP address
     config_get_string_field("key-sampling-host",server.key_sampling_host);
 
     /* Numerical values */
@@ -1150,6 +1179,12 @@ void configGetCommand(redisClient *c) {
         char buf[32];
         snprintf(buf, sizeof(buf), "%lf", server.key_sampling_p);
         addReplyBulkCString(c, buf);
+        matches++;
+    }
+    
+    if (stringmatch(pattern,"key-sampling-policy",0)) {
+        addReplyBulkCString(c,"maxmemory-policy");
+        addReplyBulkCString(c,keySamplingToString());
         matches++;
     }
 

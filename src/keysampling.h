@@ -12,5 +12,5 @@
 
 
 /* Exported API */
-void emitKey(char *key);
+void emitKey(char *cmd, char *key, int hit);
 #endif

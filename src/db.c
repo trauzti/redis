@@ -43,7 +43,12 @@ void slotToKeyFlush(void);
  *----------------------------------------------------------------------------*/
 
 robj *lookupKey(redisDb *db, robj *key) {
-    dictEntry *de = dictFind(db->dict,key->ptr);
+     unsigned int h;
+     return lookupKeyStoreHash(db, key, &h);
+}
+
+robj *lookupKeyStoreHash(redisDb *db, robj *key, unsigned int *h) {
+    dictEntry *de = dictFindStoreHash(db->dict,key->ptr, h);
     if (de) {
         robj *val = dictGetVal(de);
 
@@ -58,9 +63,8 @@ robj *lookupKey(redisDb *db, robj *key) {
     }
 }
 
-robj *lookupKeyRead(redisDb *db, robj *key) {
+robj *getKeyValue(redisDb *db, robj *key, unsigned int *h) {
     robj *val;
-
     if (expireIfNeeded(db,key) == 1) {
         /* Key expired. If we are in the context of a master, expireIfNeeded()
          * returns 0 only when the key does not exist at all, so it's save
@@ -87,19 +91,40 @@ robj *lookupKeyRead(redisDb *db, robj *key) {
             return NULL;
         }
     }
-    val = lookupKey(db,key);
+    val = lookupKeyStoreHash(db,key,h);
     if (val == NULL)
         server.stat_keyspace_misses++;
     else
         server.stat_keyspace_hits++;
 
-    if (server.key_sampling == 1) {
-        if (((double)random() / (double)RAND_MAX) <= server.key_sampling_p) {
-            emitKey((char *)key->ptr);
-        }
-    }
-
     return val;
+}
+
+robj *lookupKeyReadWithClient(redisClient *c, robj *key) { 
+    robj *val;
+    unsigned int h;
+
+    val = getKeyValue(c->db, key, &h);
+
+    if (server.key_sampling == REDIS_DO_SAMPLING) {
+        if (server.key_sampling_policy == REDIS_SAMPLING_RANDOM) {
+            if (((double)random() / (double)RAND_MAX) <= server.key_sampling_p) {
+                emitKey(c->cmd->name, (char *)key->ptr, val != NULL);
+            }
+        } else if (server.key_sampling_policy == REDIS_SAMPLING_HASH) {
+            
+            if ((h & 0xffff) <= (unsigned int) server.key_sampling_p * 0xffff) {
+                emitKey(c->cmd->name, (char *)key->ptr, val != NULL);
+            }
+        } 
+    }
+    return val;
+} 
+
+robj *lookupKeyRead(redisDb *db, robj *key) {
+    unsigned int h;
+
+    return getKeyValue(db, key, &h);
 }
 
 robj *lookupKeyWrite(redisDb *db, robj *key) {
@@ -108,7 +133,7 @@ robj *lookupKeyWrite(redisDb *db, robj *key) {
 }
 
 robj *lookupKeyReadOrReply(redisClient *c, robj *key, robj *reply) {
-    robj *o = lookupKeyRead(c->db, key);
+    robj *o = lookupKeyReadWithClient(c, key);
     if (!o) addReply(c,reply);
     return o;
 }
