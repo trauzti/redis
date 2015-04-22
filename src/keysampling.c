@@ -1,5 +1,5 @@
 /*
- *  key sampling 
+ *  key sampling
  */
 
 #include "redis.h"
@@ -15,7 +15,7 @@ void sendViaUdp(char *message, char *host, int port) {
 	bzero(&servaddr, sizeof(servaddr));
 
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
-	
+
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = inet_addr(host);
 	servaddr.sin_port = htons(port);
@@ -24,6 +24,7 @@ void sendViaUdp(char *message, char *host, int port) {
 }
 
 void emitKey(char *cmd, char *key, int hit) {
+  //printf("emitKey\n");
 	char buf[128];  // XXX: how long can redis keys be?
 	bzero(buf, 128);
 	snprintf(buf, sizeof(buf)-1, "%s %s %s\n", cmd, key, hitmiss[hit]);

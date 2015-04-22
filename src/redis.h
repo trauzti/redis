@@ -1335,6 +1335,7 @@ int expireIfNeeded(redisDb *db, robj *key);
 long long getExpire(redisDb *db, robj *key);
 void setExpire(redisDb *db, robj *key, long long when);
 robj *getKeyValue(redisDb *db, robj *key, unsigned int *h);
+void doKeyspaceSampling(char *cmd, char *key, robj *val, unsigned int h);
 robj *lookupKey(redisDb *db, robj *key);
 robj *lookupKeyStoreHash(redisDb *db, robj *key, unsigned int *h);
 robj *lookupKeyRead(redisDb *db, robj *key);

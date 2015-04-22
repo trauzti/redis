@@ -99,32 +99,54 @@ robj *getKeyValue(redisDb *db, robj *key, unsigned int *h) {
 
     return val;
 }
-
-robj *lookupKeyReadWithClient(redisClient *c, robj *key) { 
-    robj *val;
-    unsigned int h;
-
-    val = getKeyValue(c->db, key, &h);
-
+int sampled = 0, totalS = 0;
+void doKeyspaceSampling(char *cmd, char *key, robj *val, unsigned int h) {
     if (server.key_sampling == REDIS_DO_SAMPLING) {
         if (server.key_sampling_policy == REDIS_SAMPLING_RANDOM) {
             if (((double)random() / (double)RAND_MAX) <= server.key_sampling_p) {
-                emitKey(c->cmd->name, (char *)key->ptr, val != NULL);
+                emitKey(cmd, key, val != NULL);
+                ++sampled;
             }
         } else if (server.key_sampling_policy == REDIS_SAMPLING_HASH) {
-            //printf("h = %u, key=%s\n", h, (char *) key->ptr);
-            if ((h & 0xffff) <= (unsigned int) server.key_sampling_p * 0xffff) {
-                emitKey(c->cmd->name, (char *)key->ptr, val != NULL);
+            //printf("h = %u, h&0xffff=%u key=%s\n", h, h & 0xffff, (char *) key->ptr);
+            //printf("server.key_sampling_p * 0xffff =%u\n", (unsigned int) (server.key_sampling_p * 0xffff));
+            if ((h & 0xffff) <= (unsigned int) (server.key_sampling_p * 0xffff)) {
+                //printf("evaluated to true\n");
+                emitKey(cmd, key, val != NULL);
+                ++sampled;
             }
-        } 
+        }
+        ++totalS;
+        if ((totalS & 0xffff) == 0) {
+          double fraction = (double) sampled / (double) totalS;
+          printf(" Sample stats: %d/%d = %lf\n", sampled, totalS, fraction);
+          printf("server.key_sampling_p * 0xffff = %u\n", (unsigned int) (server.key_sampling_p * 0xffff));
+          printf("h = %u\n", h);
+          printf("h & 0xffff = %u\n", h & 0xffff);
+          printf("(h & 0xffff) <= (unsigned int) (server.key_sampling_p * 0xffff) == %d\n", (h & 0xffff) <= (unsigned int) (server.key_sampling_p * 0xffff));
+        }
     }
+}
+
+robj *lookupKeyReadWithClient(redisClient *c, robj *key) {
+    robj *val;
+    unsigned int h = 1337;
+
+    val = getKeyValue(c->db, key, &h);
+    doKeyspaceSampling(c->cmd->name, (char *) key->ptr, val, h);
+
     return val;
-} 
+}
+
+
 
 robj *lookupKeyRead(redisDb *db, robj *key) {
-    unsigned int h;
+    unsigned int h = 1338;
 
-    return getKeyValue(db, key, &h);
+    robj * val = getKeyValue(db, key, &h);
+    doKeyspaceSampling("UNKNOWN", (char *) key->ptr, val, h);
+
+    return val;
 }
 
 robj *lookupKeyWrite(redisDb *db, robj *key) {
