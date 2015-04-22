@@ -637,7 +637,8 @@ int main(int argc, const char **argv) {
 
     client c;
 
-    srandom(time(NULL));
+    //srandom(time(NULL));
+    srandom(1337); // have same results for different runs
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
 

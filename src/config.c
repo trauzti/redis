@@ -1004,6 +1004,16 @@ void configSetCommand(redisClient *c) {
         if (getDoubleFromObject(o, &d) == REDIS_ERR ||
             (d > 1.0 || d < 0.0)) goto badfmt;
         server.key_sampling_p = d;
+    } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-policy")) {
+        if (!strncmp(o->ptr, "random", 6)) {
+            server.key_sampling_policy = REDIS_SAMPLING_RANDOM; 
+        } else if (!strncmp(o->ptr, "hash", 4)) {
+            server.key_sampling_policy = REDIS_SAMPLING_HASH; 
+        } else { 
+            server.key_sampling_policy = -1; 
+            addReplyErrorFormat(c, "key sampling policy not valid");
+            goto badfmt;
+        }
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-host")) {
         // TODO: Validate that this is an IP address.
         server.key_sampling_host = zstrdup(o->ptr);
@@ -1183,7 +1193,7 @@ void configGetCommand(redisClient *c) {
     }
     
     if (stringmatch(pattern,"key-sampling-policy",0)) {
-        addReplyBulkCString(c,"maxmemory-policy");
+        addReplyBulkCString(c,"key-sampling-policy");
         addReplyBulkCString(c,keySamplingToString());
         matches++;
     }

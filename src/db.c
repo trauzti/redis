@@ -112,7 +112,7 @@ robj *lookupKeyReadWithClient(redisClient *c, robj *key) {
                 emitKey(c->cmd->name, (char *)key->ptr, val != NULL);
             }
         } else if (server.key_sampling_policy == REDIS_SAMPLING_HASH) {
-            
+            //printf("h = %u, key=%s\n", h, (char *) key->ptr);
             if ((h & 0xffff) <= (unsigned int) server.key_sampling_p * 0xffff) {
                 emitKey(c->cmd->name, (char *)key->ptr, val != NULL);
             }
