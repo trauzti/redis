@@ -10,9 +10,8 @@ benchmarkBinary () {
     warmUpRedis
 
     echo "Starting benchmark"
-# TODO: Increase the number of requests
-    ./src/redis-benchmark -t get -r 10000 -n 1000000 > $3
-#    ./src/redis-benchmark -t get -r 10000 -n 500000 > $3
+    ./src/redis-benchmark -t get -r 10000 -n 10000000 > $3
+
     echo "Benchmark done. "
 
     echo "Killing redis with pid $redispid"
@@ -22,34 +21,37 @@ benchmarkBinary () {
 
 
 warmUpRedis() {
+    # Fixes the hash based sampling, the hash value was always the same with the benchmark wtf...
     echo "Initializing keyspace"
     redis-cli set 1 1
 }
     
-echo "Benchmarking vanilla redis"
-benchmarkBinary ./redis-vanilla redis-vanilla.conf throughput_vanilla.out
 
-ps="0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0"
-for p in $ps
+for n_run in $(seq 1 10) 
 do
-    echo "Using p=$p"
-    sed  '/key-sampling-p /d' redis.conf > redis.conf.new
-    mv redis.conf.new redis.conf
-    sed  '/key-sampling-policy /d' redis.conf > redis.conf.new
-    mv redis.conf.new redis.conf
-    echo "key-sampling-p $p" >> redis.conf
-    echo "key-sampling-policy random" >> redis.conf
+    echo "Benchmarking vanilla redis"
+    benchmarkBinary ./redis-vanilla redis-vanilla.conf throughput_vanilla.out-${n_run}
 
-    echo "Benchmarking modified redis with random sampling and p=${p}"
-    benchmarkBinary ./src/redis-server redis.conf throughput_random_sampling_p${p}.out
-    
+    for p in $(seq 0.0 0.1 1.0) 
+    do
+        echo "n_run=${n_run} p=$p"
+        sed  '/key-sampling-p /d' redis.conf > redis.conf.new
+        mv redis.conf.new redis.conf
+        sed  '/key-sampling-policy /d' redis.conf > redis.conf.new
+        mv redis.conf.new redis.conf
+        echo "key-sampling-p $p" >> redis.conf
+        echo "key-sampling-policy random" >> redis.conf
 
-    sed  '/key-sampling-policy /d' redis.conf > redis.conf.new
-    mv redis.conf.new redis.conf
-    echo "key-sampling-policy hash" >> redis.conf
+        echo "Benchmarking modified redis with random sampling and p=${p}"
+        benchmarkBinary ./src/redis-server redis.conf throughput_random_sampling_p${p}.out-${n_run}
+        
 
-    echo "Benchmarking modified redis with hash sampling and p=${p}"
-    benchmarkBinary ./src/redis-server redis.conf throughput_hash_sampling_p${p}.out
-    # TODO: Fix the hash based sampling, the hash value is always the same with the benchmark wtf...
+        sed  '/key-sampling-policy /d' redis.conf > redis.conf.new
+        mv redis.conf.new redis.conf
+        echo "key-sampling-policy hash" >> redis.conf
 
+        echo "Benchmarking modified redis with hash sampling and p=${p}"
+        benchmarkBinary ./src/redis-server redis.conf throughput_hash_sampling_p${p}.out-${n_run}
+        # TODO: Fix the hash based sampling, the hash value is always the same with the benchmark wtf...
+    done
 done
