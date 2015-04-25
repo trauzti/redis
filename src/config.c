@@ -29,6 +29,7 @@
  */
 
 #include "redis.h"
+#include "keysampling.h"
 #include "cluster.h"
 
 #include <fcntl.h>
@@ -1000,10 +1001,14 @@ void configSetCommand(redisClient *c) {
             addReplyErrorFormat(c, "argument must be 'yes' or 'no'");
         }
         server.key_sampling = yes;
+        if (yes)
+            setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-p")) {
         if (getDoubleFromObject(o, &d) == REDIS_ERR ||
             (d > 1.0 || d < 0.0)) goto badfmt;
         server.key_sampling_p = d;
+        if (server.key_sampling)
+            setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-policy")) {
         if (!strncmp(o->ptr, "random", 6)) {
             server.key_sampling_policy = REDIS_SAMPLING_RANDOM; 
@@ -1014,13 +1019,19 @@ void configSetCommand(redisClient *c) {
             addReplyErrorFormat(c, "key sampling policy not valid");
             goto badfmt;
         }
+        if (server.key_sampling)
+            setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-host")) {
         // TODO: Validate that this is an IP address.
         server.key_sampling_host = zstrdup(o->ptr);
+        if (server.key_sampling)
+            setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
     } else if (!strcasecmp(c->argv[2]->ptr,"key-sampling-port")) {
         if (getLongLongFromObject(o, &ll) == REDIS_ERR ||
             (int)ll >= 65536 || (int)ll <= 0) goto badfmt;
         server.key_sampling_port = (int)ll;
+        if (server.key_sampling)
+            setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
     } else {
         addReplyErrorFormat(c,"Unsupported CONFIG parameter: %s",
             (char*)c->argv[2]->ptr);

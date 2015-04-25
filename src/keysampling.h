@@ -13,4 +13,5 @@
 
 /* Exported API */
 void emitKey(char *cmd, char *key, int hit);
+void setupUdpSocket(struct redisServer *srv, char *host, int port);
 #endif

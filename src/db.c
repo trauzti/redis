@@ -99,6 +99,7 @@ robj *getKeyValue(redisDb *db, robj *key, unsigned int *h) {
 
     return val;
 }
+
 int sampled = 0, totalS = 0;
 void doKeyspaceSampling(char *cmd, char *key, robj *val, unsigned int h) {
     if (server.key_sampling == REDIS_DO_SAMPLING) {

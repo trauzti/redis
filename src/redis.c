@@ -28,6 +28,7 @@
  */
 
 #include "redis.h"
+#include "keysampling.h"
 #include "cluster.h"
 #include "slowlog.h"
 #include "bio.h"
@@ -1542,6 +1543,7 @@ void initServerConfig(void) {
     server.assert_line = 0;
     server.bug_report_start = 0;
     server.watchdog_period = 0;
+
 }
 
 /* This function will try to raise the max number of open files accordingly to
@@ -1867,6 +1869,10 @@ void initServer(void) {
         server.maxmemory = 3072LL*(1024*1024); /* 3 GB */
         server.maxmemory_policy = REDIS_MAXMEMORY_NO_EVICTION;
     }
+
+    /* Key Sampling */
+    if (server.key_sampling)
+        setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
 
     if (server.cluster_enabled) clusterInit();
     replicationScriptCacheInit();

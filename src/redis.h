@@ -921,9 +921,13 @@ struct redisServer {
     /* keyhit sampling variables */
     int key_sampling;
     double key_sampling_p;
+    int key_sampling_policy;
+
     char *key_sampling_host;
     int key_sampling_port;
-    int key_sampling_policy;
+    int key_sampling_sock;
+    struct sockaddr_in *key_sampling_addr;
+    int key_sampling_connected;
 };
 
 typedef struct pubsubPattern {

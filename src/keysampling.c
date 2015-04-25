@@ -8,34 +8,44 @@
 const char *KH_DEFAULT_HOST = "127.0.0.1";
 const int KH_DEFAULT_PORT = 12345;
 
-const char *hitmiss[] = {"miss", "hit"};
+void sendViaUdp(struct redisServer *srv, char *message) {
+	sendto(srv->key_sampling_sock, message, strlen(message), 0,
+			(struct sockaddr *)(srv->key_sampling_addr),
+			sizeof(*(srv->key_sampling_addr)));
+}
 
-void sendViaUdp(char *message, char *host, int port) {
-	struct sockaddr_in servaddr;
-	bzero(&servaddr, sizeof(servaddr));
+void setupUdpSocket(struct redisServer *srv, char *host, int port) {
+	if (srv->key_sampling_connected)
+		close(srv->key_sampling_sock);
 
+	if (host == NULL)
+		host = (char *)KH_DEFAULT_HOST;
+
+	if (port == -1)
+		port = KH_DEFAULT_PORT;
+
+
+	struct sockaddr_in *servaddr;
+	servaddr = zmalloc(sizeof(servaddr));
+	bzero(servaddr, sizeof(servaddr));
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = inet_addr(host);
-	servaddr.sin_port = htons(port);
-	sendto(sock, message, strlen(message), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
-    close(sock);
+	servaddr->sin_family = AF_INET;
+	servaddr->sin_addr.s_addr = inet_addr(host);
+	servaddr->sin_port = htons(port);
+	srv->key_sampling_sock = sock;
+	srv->key_sampling_addr = servaddr;
+
+	srv->key_sampling_connected = 1;
+	printf("Setup UDP socket to %s:%d\n", host, port);
 }
 
 void emitKey(char *cmd, char *key, int hit) {
-  //printf("emitKey\n");
+	//printf("emitKey(%s, %s, %d)\n", cmd, key, hit);
 	char buf[128];  // XXX: how long can redis keys be?
 	bzero(buf, 128);
-	snprintf(buf, sizeof(buf)-1, "%s %s %s\n", cmd, key, hitmiss[hit]);
-    char *host = (char *)KH_DEFAULT_HOST;
-    int port = KH_DEFAULT_PORT;
-    if (server.key_sampling_host != NULL)
-        host = server.key_sampling_host;
+	snprintf(buf, sizeof(buf)-1, "%s %s %d\n", cmd, key, hit);
 
-    if (server.key_sampling_port != -1)
-        port = server.key_sampling_port;
-
-	sendViaUdp(buf, host, port);
+	sendViaUdp(&server, buf);
 }
 
