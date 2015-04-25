@@ -11,8 +11,8 @@ benchmarkBinary () {
 
     echo "Starting benchmark"
 # TODO: Increase the number of requests
-#    ./src/redis-benchmark -t get -r 10000 -n 1000000 > $3
-     ./src/redis-benchmark -t get -r 10000 -n 500000 > $3
+    ./src/redis-benchmark -t get -r 10000 -n 1000000 > $3
+#    ./src/redis-benchmark -t get -r 10000 -n 500000 > $3
     echo "Benchmark done. "
 
     echo "Killing redis with pid $redispid"
@@ -22,15 +22,8 @@ benchmarkBinary () {
 
 
 warmUpRedis() {
-    echo "Warming up Redis"
-    for i in {1..10} 
-    do
-        redis-cli set $i $i
-    done
-    for i in {1..10} 
-    do
-        redis-cli get $i
-    done
+    echo "Initializing keyspace"
+    redis-cli set 1 1
 }
     
 echo "Benchmarking vanilla redis"
