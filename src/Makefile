@@ -52,7 +52,8 @@ endif
 FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS)
 FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
-DEBUG=-g -ggdb 
+DEBUG=-g -ggdb
+PROFILE=$(DEBUG) -pg
 
 ifeq ($(uname_S),SunOS)
 	# SunOS

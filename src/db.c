@@ -101,6 +101,7 @@ robj *getKeyValue(redisDb *db, robj *key, unsigned int *h) {
 }
 
 int sampled = 0, totalS = 0;
+
 void doKeyspaceSampling(char *cmd, char *key, robj *val, unsigned int h) {
     if (server.key_sampling == REDIS_DO_SAMPLING) {
         if (server.key_sampling_policy == REDIS_SAMPLING_RANDOM) {
@@ -109,14 +110,13 @@ void doKeyspaceSampling(char *cmd, char *key, robj *val, unsigned int h) {
                 ++sampled;
             }
         } else if (server.key_sampling_policy == REDIS_SAMPLING_HASH) {
-            //printf("h = %u, h&0xffff=%u key=%s\n", h, h & 0xffff, (char *) key->ptr);
-            //printf("server.key_sampling_p * 0xffff =%u\n", (unsigned int) (server.key_sampling_p * 0xffff));
             if ((h & 0xffff) <= (unsigned int) (server.key_sampling_p * 0xffff)) {
                 //printf("evaluated to true\n");
                 emitKey(cmd, key, val != NULL);
                 ++sampled;
             }
         }
+/*
         ++totalS;
         if ((totalS & 0xffff) == 0) {
           double fraction = (double) sampled / (double) totalS;
@@ -126,6 +126,7 @@ void doKeyspaceSampling(char *cmd, char *key, robj *val, unsigned int h) {
           printf("h & 0xffff = %u\n", h & 0xffff);
           printf("(h & 0xffff) <= (unsigned int) (server.key_sampling_p * 0xffff) == %d\n", (h & 0xffff) <= (unsigned int) (server.key_sampling_p * 0xffff));
         }
+*/
     }
 }
 
