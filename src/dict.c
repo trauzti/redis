@@ -489,6 +489,28 @@ void dictRelease(dict *d)
     zfree(d);
 }
 
+dictEntry *dictFindStoreHash(dict *d, const void *key, unsigned int *h)
+{
+    dictEntry *he;
+    unsigned int idx, table;
+
+    if (d->ht[0].size == 0) return NULL; /* We don't have a table at all */
+    if (dictIsRehashing(d)) _dictRehashStep(d);
+    *h = dictHashKey(d, key);
+    //printf("*h=%u\n", *h);
+    for (table = 0; table <= 1; table++) {
+        idx = *h & d->ht[table].sizemask;
+        he = d->ht[table].table[idx];
+        while(he) {
+            if (dictCompareKeys(d, key, he->key))
+                return he;
+            he = he->next;
+        }
+        if (!dictIsRehashing(d)) return NULL;
+    }
+    return NULL;
+}
+
 dictEntry *dictFind(dict *d, const void *key)
 {
     dictEntry *he;

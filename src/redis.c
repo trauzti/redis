@@ -1880,6 +1880,9 @@ void initServer(void) {
         server.maxmemory = 3072LL*(1024*1024); /* 3 GB */
         server.maxmemory_policy = REDIS_MAXMEMORY_NO_EVICTION;
     }
+    /* Key Sampling */
+    if (server.key_sampling)
+        setupUdpSocket(&server, server.key_sampling_host, server.key_sampling_port);
 
     if (server.cluster_enabled) clusterInit();
     replicationScriptCacheInit();
